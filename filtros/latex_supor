@@ -1,0 +1,100 @@
+'''    def generate_plantilla(self):
+        template1 = r"""
+\documentclass[10pt,a4paper]{{article}}
+\usepackage[utf8]{{inputenc}}
+\usepackage{{graphicx}}
+\usepackage{{booktabs}}
+\title{{Reporte Automático de Filtros}}
+\date{{\today}}
+\begin{{document}}
+\maketitle
+
+\section*{{Resumen}}
+En este reporte se presentan los resultados obtenidos en el diseño y simulación de un filtro {tipo} activo de {orden} orden, con una frecuencia de corte de {fc} Hz y un ripple de ${riple}$.
+        """
+        template2 = r"""
+\section*{{Etapa {i}}}
+R1: \textbf{{{resistencia}}}\\
+C1: \textbf{{{capacitor}}}\\
+
+\noindent Arreglo resistivo recomendado:\\
+R1 = {r1}{op}{r2}{op}{r3}
+
+\begin{{figure}}[h!]
+\centering
+\includegraphics[width=0.8\textwidth]{{{bode_filename}}}
+\caption{{Respuesta en frecuencia de etapa {i}}}
+\end{{figure}}
+        """
+
+        template3 = r"""
+\section*{{Etapa {i}}}
+R1: \textbf{{{resistencia1}}}\\
+R2: \textbf{{{resistencia2}}}\\
+C1: \textbf{{{capacitor1}}}\\
+C2: \textbf{{{capacitor2}}}\\ 
+
+
+\noindent Arreglo capacitivo recomendado:\\
+C2 = {c1}{op}{c2}{op}{c3}\\ 
+
+\begin{{figure}}[h!]
+\centering
+\includegraphics[width=0.8\textwidth]{{{bode_filename}}}
+\caption{{Respuesta en frecuencia de etapa {i}}}
+\end{{figure}}
+        """
+
+        template4 = r"""
+\end{document}
+"""
+
+        latex_filled = template1.format(
+                tipo="Chebyshev",
+                orden=self.Sorder,
+                fc=self.fc,
+                riple=self.ripple,
+        )
+
+        for i in sorted(self.coeficientes[self.ripple][self.Sorder]):
+            if(self.response[int(i)-1][-1][-1]==1):
+                if(self.response[int(i)-1][-1][6] == 0):
+                    op = "+"
+                else:
+                    op = "\\texttt{||}"
+                latex_filled += template2.format(
+                    i=i,
+                    resistencia=self.response[int(i)-1][-1][0],
+                    capacitor=self.response[int(i)-1][-1][1],
+                    r1=self.response[int(i)-1][-1][3],
+                    r2=self.response[int(i)-1][-1][4],
+                    r3=self.response[int(i)-1][-1][5],
+                    op=op,
+                    bode_filename = f"bode_plot{i}.png"
+                    )
+            else:
+                if(self.response[int(i)-1][-1][9] == 0):
+                    op = "+"
+                else:
+                    op = "\\texttt{||}"
+                latex_filled += template3.format(
+                    i=i,
+                    resistencia1=self.response[int(i)-1][-1][0],
+                    resistencia2=self.response[int(i)-1][-1][1],
+                    capacitor1=self.response[int(i)-1][-1][2],
+                    capacitor2=self.response[int(i)-1][-1][3],
+                    c1=self.response[int(i)-1][-1][6],
+                    c2=self.response[int(i)-1][-1][7],
+                    c3=self.response[int(i)-1][-1][8],
+                    op=op,
+                    bode_filename = f"bode_plot{i}.png"
+                    )
+
+        latex_filled += template4
+        with open("reporte_filtro.tex", "w") as f:
+            f.write(latex_filled)
+
+        pdfl = PDFLaTeX.from_texfile("reporte_filtro.tex")
+        pdf, log, completed_process = pdfl.create_pdf(keep_pdf_file=True)
+        with open("salida.pdf", "wb") as f:
+            f.write(pdf)'''

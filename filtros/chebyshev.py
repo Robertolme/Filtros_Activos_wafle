@@ -4,6 +4,15 @@ import json
 from itertools import combinations, product
 import matplotlib.pyplot as plt
 from scipy import signal
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+
+from datetime import datetime
+
 
 class chebyshevFilter():
     def __init__(self, order, fc, rp):
@@ -43,7 +52,7 @@ class chebyshevFilter():
         response = []
         error = 0.004
         for i in self.capacitor:
-            R1 = a / (2 * np.pi * self.fc * i)
+            R1 = a / (2 * np.pi * self.fc * i)#i,err,rt,r1,r2,0,1
             try:
                 R = self.calculate_best_resistor(R1,error)
                 if(i > 700e-12 and R[-1][2] > 500):
@@ -150,6 +159,104 @@ class chebyshevFilter():
         return response
 
 
-    def print_results():
-        djhsk
+    def print_results(self):#R1, R2, C1, C2
+        for i in sorted(self.coeficientes[self.ripple][self.Sorder]):
+            s0 = 1
+            if(self.response[int(i)-1][-1][-1] == 1):
+                s1 = self.response[int(i)-1][-1][1] * (self.response[int(i)-1][-1][0])
+                s2 = 0     
+            else:
+                print(self.response[int(i)-1][-1])
+                s1 = self.response[int(i)-1][-1][2] * ((self.response[int(i)-1][-1][0])+ (self.response[int(i)-1][-1][1]))
+                s2 = self.response[int(i)-1][-1][0] * (self.response[int(i)-1][-1][1])*(self.response[int(i)-1][-1][2])*(self.response[int(i)-1][-1][3])
+
+            num = [1]          # Numerador
+            den = [s2, s1, s0]    # Denominador
+            system = signal.TransferFunction(num, den)
+            w, mag, phase = signal.bode(system, n=10000)
+
+            plt.figure(figsize=(15, 12))
+            plt.subplot(2, 1, 1)
+            plt.semilogx(w/(2*np.pi), mag)
+            plt.title('Bode Plot')
+            plt.ylabel('Magnitude (dB)')
+            plt.grid(True, which="both", ls="--")
+
+            plt.subplot(2, 1, 2)
+            plt.semilogx(w/(2*np.pi), phase)
+            plt.xlabel('Frequency (Hz)')
+            plt.ylabel('Phase (degrees)')
+            plt.grid(True, which="both", ls="--")
+
+            plt.tight_layout()
+            plt.savefig(f"plots/bode_plot{i}.png")   # Guarda la gráfica como PDF
+            
+        self.generate_pdf()
+
+    def generate_pdf(self):
+        doc = SimpleDocTemplate("salida.pdf", pagesize=A4)
+        story = []
+        styles = getSampleStyleSheet()
+
+        # Título
+        story.append(Paragraph("Reporte Automático de Filtros", styles['Title']))
+        story.append(Paragraph(datetime.today().strftime("%d/%m/%Y"), styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # Sección: Resumen
+        resumen = (
+            f"En este reporte se presentan los resultados obtenidos en el diseño y simulación "
+            f"de un filtro <b>{'Chebyshev'}</b> activo de <b>{self.Sorder}</b> orden, "
+            f"con una frecuencia de corte de <b>{self.fc} Hz</b> y un ripple de <b>{self.ripple} dB</b>."
+        )
+        story.append(Paragraph("Resumen", styles['Heading2']))
+        story.append(Paragraph(resumen, styles['Normal']))
+        story.append(Spacer(1, 12))
+
+        # Iterar sobre etapas
+        for i in sorted(self.coeficientes[self.ripple][self.Sorder]):
+            etapa = int(i)
+            data = self.response[etapa - 1][-1]
+
+            story.append(Paragraph(f"Etapa {etapa}", styles['Heading2']))
+
+            if data[-1] == 1:  # Template 2
+                op = "+" if data[6] == 0 else "||"
+                info = f"""
+                    R1: <b>{data[0]}</b><br/>
+                    C1: <b>{data[1]}</b><br/><br/>
+                    Arreglo resistivo recomendado:<br/>
+                    R1 = {data[4]} {op} {data[5]} {op} {data[6]}
+                """
+            else:  # Template 3
+                op = "+" if data[9] == 0 else "||"
+                info = f"""
+                    R1: <b>{data[0]}</b><br/>
+                    R2: <b>{data[1]}</b><br/>
+                    C1: <b>{data[2]}</b><br/>
+                    C2: <b>{data[3]}</b><br/><br/>
+                    Arreglo capacitivo recomendado:<br/>
+                    C2 = {data[6]} {op} {data[7]} {op} {data[8]}
+                """
+
+            story.append(Paragraph(info, styles['Normal']))
+            story.append(Spacer(1, 12))
+
+            # Insertar imagen bode_plot{i}.png
+            try:
+                img = Image(f"plots/bode_plot{etapa}.png", width=7*inch, height=5*inch)
+                story.append(img)
+                story.append(Paragraph(f"Figura: Respuesta en frecuencia de etapa {etapa}", styles['Italic']))
+                story.append(Spacer(1, 24))
+            except Exception as e:
+                story.append(Paragraph(f"[Imagen no disponible: bode_plot{etapa}.png]", styles['Normal']))
+
+        # Generar PDF
+        doc.build(story)
+
+
+
+
+
+
 

@@ -7,7 +7,7 @@ def main():
 	rp = 3
 
 	filtro = chebyshevFilter(order, fc, rp)
-	print(filtro.response)
+	filtro.print_results()
 
 if __name__ == '__main__':
 	main()
