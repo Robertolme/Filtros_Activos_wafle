@@ -1,12 +1,14 @@
 from filtros.chebyshev import chebyshevFilter
+from filtros.butterworth import butterFilter
+from filtros.bessel import besselFilter
 
 
 def main():
-	order = 5
-	fc = 10000
-	rp = 3
+	order = 3
+	fc = 1000
+	rp = 0.5
 
-	filtro = chebyshevFilter(order, fc, rp)
+	filtro = butterFilter(order, fc)
 	filtro.print_results()
 
 if __name__ == '__main__':
